@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.FurnaceBurnEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
@@ -20,7 +21,6 @@ import java.util.Arrays;
 public class SimonsLavaSponges extends JavaPlugin implements Listener {
 
     private static final String LAVA_SPONGE_KEY = "lava_sponge";
-
 
     @Override
     public void onEnable() {
@@ -34,7 +34,17 @@ public class SimonsLavaSponges extends JavaPlugin implements Listener {
             @EventHandler
             public void onFurnaceBurn(FurnaceBurnEvent event) {
                 ItemStack fuel = event.getFuel();
+
+                getLogger().info("FurnaceBurnEvent triggered.");
+                if (fuel != null) {
+                    getLogger().info("Fuel type: " + fuel.getType());
+                    if (fuel.hasItemMeta()) {
+                        getLogger().info("Fuel name: " + fuel.getItemMeta().getDisplayName());
+                    }
+                }
+
                 if (fuel != null && fuel.hasItemMeta() && "§cFilled Lava Sponge".equals(fuel.getItemMeta().getDisplayName())) {
+                    getLogger().info("Recognized Filled Lava Sponge as fuel.");
                     event.setBurnTime(18000); // 900 blocks (18000 ticks)
                     event.setBurning(true); // Ensure the furnace starts burning
 
@@ -44,9 +54,26 @@ public class SimonsLavaSponges extends JavaPlugin implements Listener {
                     event.getBlock().getWorld().dropItem(event.getBlock().getLocation(), lavaSponge); // Drop the Lava Sponge
                 }
             }
+
+            @EventHandler
+            public void onInventoryClick(InventoryClickEvent event) {
+                if (event.getClickedInventory() != null && event.getClickedInventory().getType() == org.bukkit.event.inventory.InventoryType.FURNACE) {
+                    getLogger().info("InventoryClickEvent triggered in furnace.");
+
+                    if (event.getSlotType() == org.bukkit.event.inventory.InventoryType.SlotType.FUEL) {
+                        ItemStack item = event.getCursor(); // Item being placed in the slot
+                        if (item != null && item.hasItemMeta() && "§cFilled Lava Sponge".equals(item.getItemMeta().getDisplayName())) {
+                            getLogger().info("Allowing placement of Filled Lava Sponge in fuel slot.");
+                            event.setCancelled(false); // Allow placing the custom fuel
+                        } else {
+                            getLogger().info("Preventing placement of other items in fuel slot.");
+                            event.setCancelled(true); // Prevent placing other invalid items
+                        }
+                    }
+                }
+            }
         }, this);
     }
-
 
     private void createLavaSpongeRecipe() {
         // Create the lava sponge item
